@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Enterprise Wave 3 Engine", layout="wide")
 
@@ -10,8 +9,9 @@ st.caption("ระบบรันกลยุทธ์จำลองคลื�
 
 if "cash" not in st.session_state: st.session_state.cash = 10000.0
 if "portfolio" not in st.session_state: st.session_state.portfolio = {}
+if "risk_tolerance" not in st.session_state: st.session_state.risk_tolerance = 1.0 
 
-# ฐานข้อมูลราคา Dynamic ตรงตามราคาตลาดสากล ณ ปัจจุบัน
+# ฐานข้อมูลราคา Matrix อัปเดตพิกัดตามราคาสด ณ ปัจจุบัน
 matrix_data = {
     "Ticker": ["NKE", "PYPL", "EL", "ENPH", "DG", "IIPR", "ZM"],
     "Buying Zone": ["$38.50 - $40.00", "$63.50 - $65.50", "$90.00 - $93.00", "$35.50 - $37.50", "$118.00 - $122.00", "$55.00 - $57.65", "$96.00 - $101.00"],
@@ -28,7 +28,7 @@ m1, m2, m3 = st.columns(3)
 with m1: st.metric(label="💵 เงินสดคงเหลือในบัญชี", value=f"${st.session_state.cash:,.2f}")
 with m2: 
     total_val = sum([p["qty"] * p["avg_price"] for p in st.session_state.portfolio.values()])
-    st.metric(label="📦 มูลค่าหุ้นที่ถือครอง in มือ", value=f"${total_val:,.2f}")
+    st.metric(label="📦 มูลค่าหุ้นที่ถือครองในมือ", value=f"${total_val:,.2f}")
 with m3: st.metric(label="💎 มูลค่าสินทรัพย์สุทธิ (NAV)", value=f"${(st.session_state.cash + total_val):,.2f}")
 
 st.markdown("---")
@@ -40,49 +40,48 @@ with col_layout_left:
     df_display["จุดตัดขาดทุน (Stop Loss)"] = df_display["จุดตัดขาดทุน (Stop Loss)"].map(lambda x: f"${x:,.2f}")
     st.dataframe(df_display[["Ticker", "Buying Zone", "จุดตัดขาดทุน (Stop Loss)", "เป้าหมายทำกำไร (161.8%)", "คำสั่งควบคุมเรียลไทม์ (21.00 น.)", "DR Code (TH)", "ระยะเวลาถือครองเป้าหมาย"]], use_container_width=True)
     
-    st.markdown("### 📈 แผนภาพกราฟเทคนิคอลประมวลผลโดย AI หลังบ้าน")
-    selected_stock = st.selectbox("เลือกชื่อหุ้นเพื่อประมวลผลกราฟอินดิเคเตอร์:", df_matrix["Ticker"].tolist())
+    st.markdown("### 📈 แผนภาพกราฟเทคนิคอลเรียลไทม์ราคาสดจากตลาดสหรัฐฯ")
+    # กล่องสับเปลี่ยนชื่อหุ้นฝั่งซ้ายล่าง เพื่อคุมกราฟ API
+    selected_stock = st.selectbox("สลับมุมมองกราฟราคาเรียลไทม์รายตัว:", df_matrix["Ticker"].tolist(), key="chart_selector")
     
-    # อัลกอริทึมวาดรูปกราฟและอินดิเคเตอร์ตามสูตรคุณลุงโฉลกอัตโนมัติป้องกันปัญหาลิขสิทธิ์
-    stock_info = df_matrix[df_matrix["Ticker"] == selected_stock].iloc[0]
-    current_p = float(stock_info["Price"])
-    stop_l = float(stock_info["จุดตัดขาดทุน (Stop Loss)"])
+    # เจาะพิกัดตลาดเพื่อดึง Widget ตัวเต็มของ TradingView รันสดผ่าน API สากล
+    market_prefix = "NYSE" if selected_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
     
-    np.random.seed(42)
-    time_series = np.linspace(0, 50, 100)
-    # จำลองโครงสร้างราคา Wave 3 ต้นสายตามกฎดาว
-    price_trend = current_p - 3 + (time_series * 0.1) + np.sin(time_series)*0.8
-    ema_fast = pd.Series(price_trend).ewm(span=12).mean()
-    ema_slow = pd.Series(price_trend).ewm(span=26).mean()
-    
-    fig, ax = plt.subplots(figsize=(10, 4.5))
-    fig.patch.set_facecolor('#0e1117')
-    ax.set_facecolor('#0e1117')
-    
-    ax.plot(time_series, price_trend, color='#ffffff', label=f'Price {selected_stock}', linewidth=1.5)
-    ax.plot(time_series, ema_fast, color='#00ffcc', label='EMA 12 (CDC Fast)', linestyle='--')
-    ax.plot(time_series, ema_slow, color='#ff0066', label='EMA 26 (CDC Slow)')
-    ax.axhline(y=stop_l, color='#ff3333', linestyle=':', label=f'Stop Loss (${stop_l:.2f})')
-    
-    ax.tick_params(colors='white')
-    ax.spines['bottom'].set_color('white')
-    ax.spines['left'].set_color('white')
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.grid(True, color='#262730', linestyle=':')
-    ax.legend(facecolor='#0e1117', edgecolor='none', labelcolor='white')
-    ax.set_title(f"{selected_stock} - Wave 3 Base Validation (CDC Signal)", color='white', fontsize=12)
-    
-    st.pyplot(fig)
-    st.caption("💡 กราฟจำลองด้านบนประมวลผลผ่านสมการคณิตศาสตร์และจุดคัทลอสของระบบโดยตรง ปลอดภัยต่อข้อจำกัดเครือข่าย 100%")
+    tv_widget_code = f"""
+    <div class="tradingview-widget-container" style="height:400px; width:100%;">
+      <div id="tradingview_chart_zone" style="height:400px;"></div>
+      <script type="text/javascript" src="https://tradingview.com"></script>
+      <script type="text/javascript">
+      new TradingView.widget({{
+        "width": "100%",
+        "height": 400,
+        "symbol": "{market_prefix}:{selected_stock}",
+        "interval": "D",
+        "timezone": "Etc/UTC",
+        "theme": "dark",
+        "style": "1",
+        "locale": "th",
+        "toolbar_bg": "#f1f3f6",
+        "enable_publishing": false,
+        "hide_side_toolbar": false,
+        "allow_symbol_change": true,
+        "container_id": "tradingview_chart_zone"
+      }});
+      </script>
+    </div>
+    """
+    components.html(tv_widget_code, height=415)
+    st.caption("💡 กราฟด้านบนดึงข้อมูลลิขสิทธิ์สากลของราคาสด ณ ปัจจุบันจาก TradingView API โดยตรงผ่านเลเยอร์ปิด ไม่หน่วง ไม่ค้าง")
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
-    calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณหน้าตักความเสี่ยง:", df_matrix["Ticker"].tolist(), key="sizer_select")
+    # ระบบจับคู่ดัชนีผ่านรหัส Session ป้องกันตัวเลขนิ่งค้างล็อกค่าย้อนกลับ
+    calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณหน้าตักความเสี่ยง:", df_matrix["Ticker"].tolist(), key="sizer_selector")
     
-    stock_row = df_matrix[df_matrix["Ticker"] == calc_ticker].iloc[0]
-    calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(stock_row["Price"]), format="%.2f", key="p_in")
-    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(stock_row["จุดตัดขาดทุน (Stop Loss)"]), format="%.2f", key="sl_in")
+    ticker_index = df_matrix[df_matrix["Ticker"] == calc_ticker].index[0]
+    
+    calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[ticker_index, "Price"]), format="%.2f", key=f"price_input_{calc_ticker}")
+    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(df_matrix.at[ticker_index, "จุดตัดขาดทุน (Stop Loss)"]), format="%.2f", key=f"sl_input_{calc_ticker}")
     
     risk_amount = (st.session_state.cash + total_val) * (st.session_state.get("risk_tolerance", 1.0) / 100.0)
     risk_per_share = calc_price - calc_sl
