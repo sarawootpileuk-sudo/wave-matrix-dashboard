@@ -41,30 +41,23 @@ with col_layout_left:
     st.dataframe(df_display[["Ticker", "Buying Zone", "จุดตัดขาดทุน (Stop Loss)", "เป้าหมายทำกำไร (161.8%)", "คำสั่งควบคุมเรียลไทม์ (21.00 น.)", "DR Code (TH)", "ระยะเวลาถือครองเป้าหมาย"]], use_container_width=True)
     
     st.markdown("### 📈 แผนภาพกราฟเทคนิคอลเรียลไทม์ราคาสดจากตลาดสหรัฐฯ")
-    # กล่องสับเปลี่ยนชื่อหุ้นฝั่งซ้ายล่าง เพื่อคุมกราฟ API
     selected_stock = st.selectbox("สลับมุมมองกราฟราคาเรียลไทม์รายตัว:", df_matrix["Ticker"].tolist(), key="chart_selector")
     
-        # ดึงวิดเจ็ตลิขสิทธิ์ความปลอดภัยตรงจุดสากล ข้ามข่ายการบล็อก iFrame ของระบบ Chrome
+    market_prefix = "NYSE" if selected_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
+    
+    # ระบบโครงสร้าง TradingView iFrame Embed API รุ่นสากล ป้องกันบั๊กย่อหน้าและการบล็อกของแท็บเล็ต
     tv_widget_code = f"""
     <iframe src="https://tradingview.com{market_prefix}:{selected_stock}&interval=D&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=th&utm_source=localhost&utm_medium=widget&utm_campaign=chart&utm_term={market_prefix}%3A{selected_stock}" 
     width="100%" height="400" frameborder="0" allowtransparency="true" scrolling="no" allowfullscreen></iframe>
-    """
-    components.html(tv_widget_code, height=415)
-        "allow_symbol_change": true,
-        "container_id": "tradingview_chart_zone"
-      }});
-      </script>
-    </div>
     """
     components.html(tv_widget_code, height=415)
     st.caption("💡 กราฟด้านบนดึงข้อมูลลิขสิทธิ์สากลของราคาสด ณ ปัจจุบันจาก TradingView API โดยตรงผ่านเลเยอร์ปิด ไม่หน่วง ไม่ค้าง")
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
-    # ระบบจับคู่ดัชนีผ่านรหัส Session ป้องกันตัวเลขนิ่งค้างล็อกค่าย้อนกลับ
     calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณหน้าตักความเสี่ยง:", df_matrix["Ticker"].tolist(), key="sizer_selector")
     
-    ticker_index = df_matrix[df_matrix["Ticker"] == calc_ticker].index[0]
+    ticker_index = df_matrix[df_matrix["Ticker"] == calc_ticker].index
     
     calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[ticker_index, "Price"]), format="%.2f", key=f"price_input_{calc_ticker}")
     calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(df_matrix.at[ticker_index, "จุดตัดขาดทุน (Stop Loss)"]), format="%.2f", key=f"sl_input_{calc_ticker}")
