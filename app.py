@@ -44,26 +44,12 @@ with col_layout_left:
     # กล่องสับเปลี่ยนชื่อหุ้นฝั่งซ้ายล่าง เพื่อคุมกราฟ API
     selected_stock = st.selectbox("สลับมุมมองกราฟราคาเรียลไทม์รายตัว:", df_matrix["Ticker"].tolist(), key="chart_selector")
     
-    # เจาะพิกัดตลาดเพื่อดึง Widget ตัวเต็มของ TradingView รันสดผ่าน API สากล
-    market_prefix = "NYSE" if selected_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
-    
+        # ดึงวิดเจ็ตลิขสิทธิ์ความปลอดภัยตรงจุดสากล ข้ามข่ายการบล็อก iFrame ของระบบ Chrome
     tv_widget_code = f"""
-    <div class="tradingview-widget-container" style="height:400px; width:100%;">
-      <div id="tradingview_chart_zone" style="height:400px;"></div>
-      <script type="text/javascript" src="https://tradingview.com"></script>
-      <script type="text/javascript">
-      new TradingView.widget({{
-        "width": "100%",
-        "height": 400,
-        "symbol": "{market_prefix}:{selected_stock}",
-        "interval": "D",
-        "timezone": "Etc/UTC",
-        "theme": "dark",
-        "style": "1",
-        "locale": "th",
-        "toolbar_bg": "#f1f3f6",
-        "enable_publishing": false,
-        "hide_side_toolbar": false,
+    <iframe src="https://tradingview.com{market_prefix}:{selected_stock}&interval=D&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=th&utm_source=localhost&utm_medium=widget&utm_campaign=chart&utm_term={market_prefix}%3A{selected_stock}" 
+    width="100%" height="400" frameborder="0" allowtransparency="true" scrolling="no" allowfullscreen></iframe>
+    """
+    components.html(tv_widget_code, height=415)
         "allow_symbol_change": true,
         "container_id": "tradingview_chart_zone"
       }});
