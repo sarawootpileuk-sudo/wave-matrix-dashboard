@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Enterprise Wave 3 Engine", layout="wide")
 
@@ -40,23 +39,20 @@ with col_layout_left:
     df_display["จุดตัดขาดทุน (Stop Loss)"] = df_display["จุดตัดขาดทุน (Stop Loss)"].map(lambda x: f"${x:,.2f}")
     st.dataframe(df_display[["Ticker", "Buying Zone", "จุดตัดขาดทุน (Stop Loss)", "เป้าหมายทำกำไร (161.8%)", "คำสั่งควบคุมเรียลไทม์ (21.00 น.)", "DR Code (TH)", "ระยะเวลาถือครองเป้าหมาย"]], use_container_width=True)
     
-    st.markdown("### 📈 แผนภาพกราฟเทคนิคอลเรียลไทม์ราคาสดจากตลาดสหรัฐฯ")
-    selected_stock = st.selectbox("สลับมุมมองกราฟราคาเรียลไทม์รายตัว:", df_matrix["Ticker"].tolist(), key="chart_selector")
+    st.markdown("### 📈 แผนภาพกราฟเทคนิคอลเรียลไทม์ (ตลาดสหรัฐฯ)")
+    selected_stock = st.selectbox("เลือกชื่อหุ้นเพื่อดึงสัญญาณกราฟราคาสดรายตัว:", df_matrix["Ticker"].tolist(), key="chart_selector")
     
     market_prefix = "NYSE" if selected_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
+    tv_url = f"https://tradingview.com{market_prefix}:{selected_stock}"
     
-    tv_widget_code = f"""
-    <iframe src="https://tradingview.com{market_prefix}:{selected_stock}&interval=D&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=th&utm_source=localhost&utm_medium=widget&utm_campaign=chart&utm_term={market_prefix}%3A{selected_stock}" 
-    width="100%" height="400" frameborder="0" allowtransparency="true" scrolling="no" allowfullscreen></iframe>
-    """
-    components.html(tv_widget_code, height=415)
-    st.caption("💡 กราฟด้านบนดึงข้อมูลลิขสิทธิ์สากลของราคาสด ณ ปัจจุบันจาก TradingView API โดยตรงผ่านเลเยอร์ปิด ไม่หน่วง ไม่ค้าง")
+    # ฝังระบบปุ่มควบคุมแบบ Hyperlink Link Button ข้ามระบบล็อกความปลอดภัยของบราว์เซอร์ Chrome ถาวร
+    st.markdown(f'<a href="{tv_url}" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #0088cc; color: white; text-align: center; text-decoration: none; font-size: 16px; border-radius: 4px; font-weight: bold; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🔗 คลิกเปิดหน้าต่างกราฟ {selected_stock} ขีดเส้นแนวโน้มเรียลไทม์ 100%</a>', unsafe_allow_html=True)
+    st.caption("💡 แผงปุ่มด้านบนจะทำการเบิกตัวลิงก์ลิขสิทธิ์สากลแยกแท็บใหม่บนคอมพิวเตอร์ คมชัดเต็มหน้าจอ และรองรับเครื่องมือวิเคราะห์ทางเทคนิคเต็มรูปแบบ")
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
     calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณหน้าตักความเสี่ยง:", df_matrix["Ticker"].tolist(), key="sizer_selector")
     
-    # ดึงค่าพิกัดดัชนีเป็นแบบจำเพาะเจาะจงตัวเลขรายแถว ข้ามขีดจำกัด InvalidIndexError ของ Python 3.14
     target_idx = int(df_matrix[df_matrix["Ticker"] == calc_ticker].index[0])
     
     calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[target_idx, "Price"]), format="%.2f", key=f"price_input_{calc_ticker}")
