@@ -46,7 +46,7 @@ with col_layout_left:
     # อัลกอริทึมวาดรูปกราฟและอินดิเคเตอร์ตามสูตรคุณลุงโฉลกอัตโนมัติป้องกันปัญหาลิขสิทธิ์
     stock_info = df_matrix[df_matrix["Ticker"] == selected_stock].iloc[0]
     current_p = float(stock_info["Price"])
-    stop_l = float(stock_info "Stop Loss")
+    stop_l = float(stock_info["จุดตัดขาดทุน (Stop Loss)"])
     
     np.random.seed(42)
     time_series = np.linspace(0, 50, 100)
