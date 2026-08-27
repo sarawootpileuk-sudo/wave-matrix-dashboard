@@ -42,18 +42,19 @@ with col_layout_left:
     st.markdown("### 📈 แผนภาพกราฟเทคนิคอลเรียลไทม์ (ตลาดสหรัฐฯ)")
     selected_stock = st.selectbox("เลือกชื่อหุ้นเพื่อดึงสัญญาณกราฟราคาสดรายตัว:", df_matrix["Ticker"].tolist(), key="chart_selector")
     
+    # พิกัดส่งลิงก์ตรงดิ่งเข้าสู่ศูนย์วิเคราะห์ทางเทคนิคตัวเต็มสากลของ TradingView (CDC ปลอดภัย 100%)
     market_prefix = "NYSE" if selected_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
     tv_url = f"https://tradingview.com{market_prefix}:{selected_stock}"
     
-    # ฝังระบบปุ่มควบคุมแบบ Hyperlink Link Button ข้ามระบบล็อกความปลอดภัยของบราว์เซอร์ Chrome ถาวร
-    st.markdown(f'<a href="{tv_url}" target="_blank" style="display: inline-block; padding: 14px 28px; background-color: #0088cc; color: white; text-align: center; text-decoration: none; font-size: 16px; border-radius: 4px; font-weight: bold; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🔗 คลิกเปิดหน้าต่างกราฟ {selected_stock} ขีดเส้นแนวโน้มเรียลไทม์ 100%</a>', unsafe_allow_html=True)
-    st.caption("💡 แผงปุ่มด้านบนจะทำการเบิกตัวลิงก์ลิขสิทธิ์สากลแยกแท็บใหม่บนคอมพิวเตอร์ คมชัดเต็มหน้าจอ และรองรับเครื่องมือวิเคราะห์ทางเทคนิคเต็มรูปแบบ")
+    # 🚀 ตัวปลดล็อกสิทธิ์ระดับวิลลาร์: บังคับเปิดแท็บใหม่ผ่านปุ่มคลาวด์แท้ ลื่นไหล 100% ไร้รอยต่อ
+    st.link_button(label=f"🔗 คลิกเปิดหน้าต่างกราฟ {selected_stock} ขีดเส้นแนวเนลเรียลไทม์ 100%", url=tv_url, use_container_width=True)
+    st.caption("💡 ระบบเปลี่ยนมาใช้ปุ่มแท้ของ Streamlit ซึ่งได้รับอนุญาตความปลอดภัยขั้นสูงสุดในการข้ามจุดบล็อกและทะลวงเปิดหน้าแท็บใหม่บนคอมพิวเตอร์ได้ทันที")
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
     calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณหน้าตักความเสี่ยง:", df_matrix["Ticker"].tolist(), key="sizer_selector")
     
-    target_idx = int(df_matrix[df_matrix["Ticker"] == calc_ticker].index[0])
+    target_idx = int(df_matrix[df_matrix["Ticker"] == calc_ticker].index)
     
     calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[target_idx, "Price"]), format="%.2f", key=f"price_input_{calc_ticker}")
     calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(df_matrix.at[target_idx, "จุดตัดขาดทุน (Stop Loss)"]), format="%.2f", key=f"sl_input_{calc_ticker}")
