@@ -35,25 +35,16 @@ col_layout_left, col_layout_right = st.columns(2)
 
 with col_layout_left:
     st.markdown("### 📊 พิกัดคำสั่งซื้อขายประจำวันและการตรวจเทรนด์")
+    # แสดงผลตารางเวอร์ชันภาษาไทย จัดระเบียบช่อง DR Code และระยะเวลาไว้หลังสุดตามคำสั่งควบคุมอย่างสมบูรณ์แบบ
     df_display = df_matrix.copy()
     df_display["จุดตัดขาดทุน (Stop Loss)"] = df_display["จุดตัดขาดทุน (Stop Loss)"].map(lambda x: f"${x:,.2f}")
     st.dataframe(df_display[["Ticker", "Buying Zone", "จุดตัดขาดทุน (Stop Loss)", "เป้าหมายทำกำไร (161.8%)", "คำสั่งควบคุมเรียลไทม์ (21.00 น.)", "DR Code (TH)", "ระยะเวลาถือครองเป้าหมาย"]], use_container_width=True)
-    
-    st.markdown("### 📈 แผนภาพกราฟเทคนิคอลเรียลไทม์ (ตลาดสหรัฐฯ)")
-    selected_stock = st.selectbox("เลือกชื่อหุ้นเพื่อดึงสัญญาณกราฟราคาสดรายตัว:", df_matrix["Ticker"].tolist(), key="chart_selector")
-    
-    market_prefix = "NYSE" if selected_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
-    tv_url = f"https://tradingview.com{market_prefix}:{selected_stock}"
-    
-    # ปุ่มแท้ Streamlit ข้ามระบบบล็อกความปลอดภัยเปิดหน้าต่างแยกแท็บ 100%
-    st.link_button(label=f"🔗 คลิกเปิดหน้าต่างกราฟ {selected_stock} ขีดเส้นแนวโน้มเรียลไทม์ 100%", url=tv_url, use_container_width=True)
-    st.caption("💡 ระบบผูกลิงก์ลิขสิทธิ์สากลข้ามจุดบล็อกไปวาดแสดงผลกราฟราคาสดบราวเซอร์แท็บใหม่แบบเต็มจอ")
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
     calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณหน้าตักความเสี่ยง:", df_matrix["Ticker"].tolist(), key="sizer_selector")
     
-    # 🛠️ ใช้กลไก .index[0] ทลายบั๊ก TypeError ของหน่วยประมวลผลด่านสุดท้ายถาวร
+    # ดึงค่าพิกัดดัชนีผ่านระบบจำนวนเต็มเพื่อความเสถียรสูงสุดบน Python 3.14
     target_idx = int(df_matrix[df_matrix["Ticker"] == calc_ticker].index[0])
     
     calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[target_idx, "Price"]), format="%.2f", key=f"price_input_{calc_ticker}")
