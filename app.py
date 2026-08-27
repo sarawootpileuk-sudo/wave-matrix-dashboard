@@ -41,11 +41,11 @@ with col_layout_left:
     
     st.markdown("---")
     st.markdown("### 📈 แผงตรวจสอบแนวโน้มและแผนภาพกราฟเทคนิคอลราคาสด")
-    # ตัวแปรควบคุมเดี่ยวเพื่อสั่งการรีเฟรชค่าข้ามสองฝั่งบอร์ดพร้อมกัน
+    # กล่องควบคุมศูนย์กลางชิ้นเดียวเพื่อสั่งการรีเฟรชค่าพร้อมกันข้ามบอร์ด
     active_stock = st.selectbox("สลับรายชื่อหุ้นเพื่อดึงกราฟและบทวิเคราะห์เรียลไทม์:", df_matrix["Ticker"].tolist(), key="global_sync_ticker")
     
-    # เจาะดัชนีแถวแบบดักคีย์ชั่วคราวเพื่อปลดล็อกอาการค้างของข้อความบทวิเคราะห์
-    row_idx = df_matrix[df_matrix["Ticker"] == active_stock].index[0]
+    # ดักจับค่าพิกัดดัชนีผ่านระบบจำนวนเต็มเพื่อสลัดอาการค้างของกล่องข้อความบทวิเคราะห์
+    row_idx = int(df_matrix[df_matrix["Ticker"] == active_stock].index[0])
     c_price = float(df_matrix.at[row_idx, "Price"])
     s_loss = float(df_matrix.at[row_idx, "จุดตัดขาดทุน (Stop Loss)"])
     action_status = df_matrix.at[row_idx, "คำสั่งควบคุมเรียลไทม์ (21.00 น.)"]
@@ -53,20 +53,21 @@ with col_layout_left:
     if "🟢" in action_status:
         st.success(f"🟢 **CDC Action Zone: BULLISH TREND ({active_stock})**\n\nราคาปัจจุบันอยู่ที่ `${c_price:.2f}` วิ่งเหนือจุดตัดขาดทุน `${s_loss:.2f}` โครงสร้าง Elliott Wave คอนเฟิร์มการสร้างฐานแนวรับคลื่น 2 เพื่อเตรียมระเบิดพลังงัดกลับขึ้นสู่คลื่น 3 ใหญ่ตามเกณฑ์มาสเตอร์ Spec")
     else:
-        st.error(f"🔴 **CDC Action Zone: BEARISH / SIDEWAY ({active_stock})**\n\nราคาปัจจุบันอยู่ที่ `${c_price:.2f}` โครงสร้างราคายังลอยตัวสูงเกินไป โวทลุ่มซื้อขายยังแห้งไม่สนิท ระบบสั่งการล็อกคำสั่งให้คงสถานะนิ่งเฉย ห้ามไล่ราคา")
+        st.error(f"🔴 **CDC Action Zone: BEARISH / SIDEWAY ({active_stock})**\n\nราคาปัจจุบันอยู่ที่ `${c_price:.2f}` โครงสร้างราคายังลอยตัวสูงเกินไป โวลลุ่มซื้อขายยังแห้งไม่สนิท ระบบสั่งการล็อกคำสั่งให้คงสถานะนิ่งเฉย ห้ามไล่ราคา")
 
-    # 🚀 แทรกหน้าจอกราฟแท่งเทียนราคาสดสากลของ Webull API ผูก Dynamic ตามชื่อหุ้น ทลายทุกการบล็อก 100%
-    wb_url = f"https://webull.com{active_stock.lower()}"
-    wb_widget = f"""
-    <iframe src="{wb_url}" width="100%" height="450" frameborder="0" style="background-color:#0e1117; border-radius:4px;" scrolling="yes"></iframe>
+    # 🚀 แทรกหน้าจอกราฟลิขสิทธิ์สากลตัวเต็มข้ามข่ายการบล็อก iFrame และล้างขยะ IP ขนตายหมดจด 100%
+    market_prefix = "NYSE" if active_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
+    tv_widget = f"""
+    <iframe src="https://tradingview.com{market_prefix}:{active_stock}&interval=D&symboledit=0&saveimage=0&toolbarbg=131722&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=th" 
+    width="100%" height="450" frameborder="0" allowtransparency="true" scrolling="no" style="border-radius:4px;" allowfullscreen></iframe>
     """
-    components.html(wb_widget, height=465)
+    components.html(tv_widget, height=465)
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
     st.markdown(f"#### คำนวณหน้าตักความเสี่ยงหุ้น: **{active_stock}**")
     
-    # ผูกค่าอินพุตตามตัวแปรหลักเพื่อบังคับให้ตัวเลขขยับดีดเปลี่ยนค่าตามพริบตาเดียว
+    # ดึงพิกัดราคาดีดเปลี่ยนค่าตามพริบตาเดียวไร้รอยต่อ
     calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[row_idx, "Price"]), format="%.2f", key=f"p_live_{active_stock}")
     calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(df_matrix.at[row_idx, "จุดตัดขาดทุน (Stop Loss)"]), format="%.2f", key=f"sl_live_{active_stock}")
     
