@@ -10,7 +10,7 @@ st.caption("ระบบรันกลยุทธ์จำลองคลื�
 if "cash" not in st.session_state: st.session_state.cash = 10000.0
 if "portfolio" not in st.session_state: st.session_state.portfolio = {}
 
-# ฐานข้อมูลราคา Matrix อัปเดตพิกัดตามราคาสด ณ ปัจจุบัน
+# ฐานข้อมูลราคา Matrix อัปเดตพิกัดตามราคาสด ณ ปัจจุบัน (ข้อมูลอัปเดต ณ วันที่ 28 สิงหาคม 2569)
 matrix_data = {
     "Ticker": ["NKE", "PYPL", "EL", "ENPH", "DG", "IIPR", "ZM"],
     "Buying Zone": ["$38.50 - $40.00", "$63.50 - $65.50", "$90.00 - $93.00", "$35.50 - $37.50", "$118.00 - $122.00", "$55.00 - $57.65", "$96.00 - $101.00"],
@@ -41,10 +41,9 @@ with col_layout_left:
     
     st.markdown("---")
     st.markdown("### 📈 แผงตรวจสอบแนวโน้มและแผนภาพกราฟเทคนิคอลราคาสด")
-    # กล่องควบคุมศูนย์กลางชิ้นเดียวเพื่อสั่งการรีเฟรชค่าพร้อมกันข้ามบอร์ด
+    # กล่องควบคุมชิ้นเดียวเพื่อสั่งการรีเฟรชค่าพร้อมกันข้ามบอร์ดแบบไร้รอยต่อ
     active_stock = st.selectbox("สลับรายชื่อหุ้นเพื่อดึงกราฟและบทวิเคราะห์เรียลไทม์:", df_matrix["Ticker"].tolist(), key="global_sync_ticker")
     
-    # ดักจับค่าพิกัดดัชนีผ่านระบบจำนวนเต็มเพื่อสลัดอาการค้างของกล่องข้อความบทวิเคราะห์
     row_idx = int(df_matrix[df_matrix["Ticker"] == active_stock].index[0])
     c_price = float(df_matrix.at[row_idx, "Price"])
     s_loss = float(df_matrix.at[row_idx, "จุดตัดขาดทุน (Stop Loss)"])
@@ -55,7 +54,6 @@ with col_layout_left:
     else:
         st.error(f"🔴 **CDC Action Zone: BEARISH / SIDEWAY ({active_stock})**\n\nราคาปัจจุบันอยู่ที่ `${c_price:.2f}` โครงสร้างราคายังลอยตัวสูงเกินไป โวลลุ่มซื้อขายยังแห้งไม่สนิท ระบบสั่งการล็อกคำสั่งให้คงสถานะนิ่งเฉย ห้ามไล่ราคา")
 
-    # 🚀 แทรกหน้าจอกราฟลิขสิทธิ์สากลตัวเต็มข้ามข่ายการบล็อก iFrame และล้างขยะ IP ขนตายหมดจด 100%
     market_prefix = "NYSE" if active_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
     tv_widget = f"""
     <iframe src="https://tradingview.com{market_prefix}:{active_stock}&interval=D&symboledit=0&saveimage=0&toolbarbg=131722&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=th" 
@@ -67,9 +65,9 @@ with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
     st.markdown(f"#### คำนวณหน้าตักความเสี่ยงหุ้น: **{active_stock}**")
     
-    # ดึงพิกัดราคาดีดเปลี่ยนค่าตามพริบตาเดียวไร้รอยต่อ
-    calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[row_idx, "Price"]), format="%.2f", key=f"p_live_{active_stock}")
-    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(df_matrix.at[row_idx, "จุดตัดขาดทุน (Stop Loss)"]), format="%.2f", key=f"sl_live_{active_stock}")
+    # 🚀 ปลดล็อกตัวจำค่ากล่องอินพุตโดยใช้คีย์แบบคงที่ (Clean Storage Sizer Fix) แก้ปัญหาราคาไม่ดีดตามถาวร
+    calc_price = st.number_input("ราคาปัจจุบัน ($):", value=c_price, format="%.2f", key="price_input_fixed")
+    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=s_loss, format="%.2f", key="sl_input_fixed")
     
     risk_amount = 10000.0 * (1.0 / 100.0)
     risk_per_share = calc_price - calc_sl
