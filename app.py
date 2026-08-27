@@ -82,7 +82,7 @@ with col_layout_right:
     
     stock_row = df_matrix[df_matrix["Ticker"] == calc_ticker].iloc[0]
     calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(stock_row["Price"]), format="%.2f", key="p_in")
-    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(stock_row["Stop Loss"]), format="%.2f", key="sl_in")
+    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(stock_row["จุดตัดขาดทุน (Stop Loss)"]), format="%.2f", key="sl_in")
     
     risk_amount = (st.session_state.cash + total_val) * (st.session_state.get("risk_tolerance", 1.0) / 100.0)
     risk_per_share = calc_price - calc_sl
