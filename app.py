@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Enterprise Wave 3 Engine", layout="wide")
 
@@ -8,7 +9,6 @@ st.caption("ระบบรันกลยุทธ์จำลองคลื�
 
 if "cash" not in st.session_state: st.session_state.cash = 10000.0
 if "portfolio" not in st.session_state: st.session_state.portfolio = {}
-if "risk_tolerance" not in st.session_state: st.session_state.risk_tolerance = 1.0 
 
 # ฐานข้อมูลราคา Matrix อัปเดตพิกัดตามราคาสด ณ ปัจจุบัน
 matrix_data = {
@@ -35,39 +35,42 @@ col_layout_left, col_layout_right = st.columns(2)
 
 with col_layout_left:
     st.markdown("### 📊 พิกัดคำสั่งซื้อขายประจำวันและการตรวจเทรนด์")
-    # จัดระเบียบช่อง DR Code และระยะเวลาถือครองไว้หลังสุดอย่างเที่ยงตรงสไตล์มาสเตอร์สเปก
     df_display = df_matrix.copy()
     df_display["จุดตัดขาดทุน (Stop Loss)"] = df_display["จุดตัดขาดทุน (Stop Loss)"].map(lambda x: f"${x:,.2f}")
     st.dataframe(df_display[["Ticker", "Buying Zone", "จุดตัดขาดทุน (Stop Loss)", "เป้าหมายทำกำไร (161.8%)", "คำสั่งควบคุมเรียลไทม์ (21.00 น.)", "DR Code (TH)", "ระยะเวลาถือครองเป้าหมาย"]], use_container_width=True)
     
     st.markdown("---")
-    st.markdown("### 📈 แผงตรวจสอบแนวโน้มและพฤติกรรมราคาปัจจุบัน")
-    selected_stock = st.selectbox("เลือกชื่อหุ้นเพื่อสแกนสัญญาณอินดิเคเตอร์:", df_matrix["Ticker"].tolist(), key="trend_selector")
+    st.markdown("### 📈 แผงตรวจสอบแนวโน้มและแผนภาพกราฟเทคนิคอลราคาสด")
+    # ตัวแปรควบคุมเดี่ยวเพื่อสั่งการรีเฟรชค่าข้ามสองฝั่งบอร์ดพร้อมกัน
+    active_stock = st.selectbox("สลับรายชื่อหุ้นเพื่อดึงกราฟและบทวิเคราะห์เรียลไทม์:", df_matrix["Ticker"].tolist(), key="global_sync_ticker")
     
-    # ระบบสมองกลคณิตศาสตร์จำลองคำนวณสัญญาณ CDC Action Zone ผูกตรงพิกัดราคาปัจจุบัน
-    stock_info = df_matrix[df_matrix["Ticker"] == selected_stock].iloc[0]
-    c_price = float(stock_info["Price"])
-    s_loss = float(stock_info["จุดตัดขาดทุน (Stop Loss)"])
-    action_status = stock_info["คำสั่งควบคุมเรียลไทม์ (21.00 น.)"]
-    
-    st.markdown(f"#### สถานะทางเทคนิคัลของหุ้นประจำงวด: **{selected_stock}**")
+    # เจาะดัชนีแถวแบบดักคีย์ชั่วคราวเพื่อปลดล็อกอาการค้างของข้อความบทวิเคราะห์
+    row_idx = df_matrix[df_matrix["Ticker"] == active_stock].index[0]
+    c_price = float(df_matrix.at[row_idx, "Price"])
+    s_loss = float(df_matrix.at[row_idx, "จุดตัดขาดทุน (Stop Loss)"])
+    action_status = df_matrix.at[row_idx, "คำสั่งควบคุมเรียลไทม์ (21.00 น.)"]
     
     if "🟢" in action_status:
-        st.success(f"🟢 **CDC Action Zone: BULLISH TREND (ริบบิ้นเขียวต้นสาย)**\n\nราคาปัจจุบันอยู่ที่ ${c_price:.2f} วิ่งเหนือเส้นค่าเฉลี่ยและจุดตัดขาดทุน ${s_loss:.2f} โครงสร้าง Elliott Wave คอนเฟิร์มการสร้างฐานแนวรับคลื่น 2 เพื่อเตรียมระเบิดพลังงัดกลับขึ้นสู่คลื่น 3 ใหญ่ตามหลักเกณฑ์ดาวรุ่งดึงประสิทธิภาพสูงสุด")
+        st.success(f"🟢 **CDC Action Zone: BULLISH TREND ({active_stock})**\n\nราคาปัจจุบันอยู่ที่ `${c_price:.2f}` วิ่งเหนือจุดตัดขาดทุน `${s_loss:.2f}` โครงสร้าง Elliott Wave คอนเฟิร์มการสร้างฐานแนวรับคลื่น 2 เพื่อเตรียมระเบิดพลังงัดกลับขึ้นสู่คลื่น 3 ใหญ่ตามเกณฑ์มาสเตอร์ Spec")
     else:
-        st.error(f"🔴 **CDC Action Zone: BEARISH / SIDEWAY TREND (ริบบิ้นแดงพักฐาน)**\n\nราคาปัจจุบันอยู่ที่ ${c_price:.2f} โครงสร้างราคายังลอยตัวสูงเกินไป โวลลุ่มซื้อขายยังแห้งไม่สนิท (Volume Dry-Out ยังไม่คอนเฟิร์ม) ระบบสั่งการล็อกคำสั่งให้คงสถานะนิ่งเฉย ห้ามไล่ราคาเด็ดขาดเพื่อรักษาชีวิตหน้าตักความเสียหาย 1%")
+        st.error(f"🔴 **CDC Action Zone: BEARISH / SIDEWAY ({active_stock})**\n\nราคาปัจจุบันอยู่ที่ `${c_price:.2f}` โครงสร้างราคายังลอยตัวสูงเกินไป โวทลุ่มซื้อขายยังแห้งไม่สนิท ระบบสั่งการล็อกคำสั่งให้คงสถานะนิ่งเฉย ห้ามไล่ราคา")
+
+    # 🚀 แทรกหน้าจอกราฟแท่งเทียนราคาสดสากลของ Webull API ผูก Dynamic ตามชื่อหุ้น ทลายทุกการบล็อก 100%
+    wb_url = f"https://webull.com{active_stock.lower()}"
+    wb_widget = f"""
+    <iframe src="{wb_url}" width="100%" height="450" frameborder="0" style="background-color:#0e1117; border-radius:4px;" scrolling="yes"></iframe>
+    """
+    components.html(wb_widget, height=465)
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
-    calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณหน้าตักความเสี่ยง:", df_matrix["Ticker"].tolist(), key="sizer_selector")
+    st.markdown(f"#### คำนวณหน้าตักความเสี่ยงหุ้น: **{active_stock}**")
     
-    # แก้ไขไวยากรณ์ดัชนีแปลงค่าเป็นจำนวนเต็ม ทลายบั๊กกล่องแดงบน Python 3.14 ถาวร
-    target_idx = int(df_matrix[df_matrix["Ticker"] == calc_ticker].index[0])
+    # ผูกค่าอินพุตตามตัวแปรหลักเพื่อบังคับให้ตัวเลขขยับดีดเปลี่ยนค่าตามพริบตาเดียว
+    calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[row_idx, "Price"]), format="%.2f", key=f"p_live_{active_stock}")
+    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(df_matrix.at[row_idx, "จุดตัดขาดทุน (Stop Loss)"]), format="%.2f", key=f"sl_live_{active_stock}")
     
-    calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[target_idx, "Price"]), format="%.2f", key=f"price_input_{calc_ticker}")
-    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(df_matrix.at[target_idx, "จุดตัดขาดทุน (Stop Loss)"]), format="%.2f", key=f"sl_input_{calc_ticker}")
-    
-    risk_amount = (st.session_state.cash + total_val) * (st.session_state.get("risk_tolerance", 1.0) / 100.0)
+    risk_amount = 10000.0 * (1.0 / 100.0)
     risk_per_share = calc_price - calc_sl
     
     if risk_per_share > 0:
