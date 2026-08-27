@@ -10,7 +10,7 @@ st.caption("ระบบรันกลยุทธ์จำลองคลื�
 if "cash" not in st.session_state: st.session_state.cash = 10000.0
 if "portfolio" not in st.session_state: st.session_state.portfolio = {}
 
-# ฐานข้อมูลราคา Matrix อัปเดตพิกัดตามราคาสด ณ ปัจจุบัน (ข้อมูลอัปเดต ณ วันที่ 28 สิงหาคม 2569)
+# ฐานข้อมูลราคา Matrix อัปเดตพิกัดตามราคาสด ณ ปัจจุบัน
 matrix_data = {
     "Ticker": ["NKE", "PYPL", "EL", "ENPH", "DG", "IIPR", "ZM"],
     "Buying Zone": ["$38.50 - $40.00", "$63.50 - $65.50", "$90.00 - $93.00", "$35.50 - $37.50", "$118.00 - $122.00", "$55.00 - $57.65", "$96.00 - $101.00"],
@@ -27,47 +27,44 @@ m1, m2, m3 = st.columns(3)
 with m1: st.metric(label="💵 เงินสดคงเหลือในบัญชี", value=f"${st.session_state.cash:,.2f}")
 with m2: 
     total_val = sum([p["qty"] * p["avg_price"] for p in st.session_state.portfolio.values()])
-    st.metric(label="📦 มูลค่าหุ้นที่ถือครองในมือ", value=f"${total_val:,.2f}")
+    st.metric(label="📦 มูลค่าหุ้นที่ถือครอง in มือ", value=f"${total_val:,.2f}")
 with m3: st.metric(label="💎 มูลค่าสินทรัพย์สุทธิ (NAV)", value=f"${(st.session_state.cash + total_val):,.2f}")
 
 st.markdown("---")
+
+# 🚀 ปลดล็อกอาการค้างล็อกค่านิ่ง: ใช้กล่องเลือกศูนย์กลางชิ้นเดียวคุมทั้งหน้าเว็บอย่างเด็ดขาด
+target_stock = st.selectbox("🎯 เลือกชื่อหุ้นเพื่อสลับข้อมูลราคา เครื่องคำนวณ และกราฟเทคนิคอลพร้อมกันทันที:", df_matrix["Ticker"].tolist(), key="main_global_selector")
+
 col_layout_left, col_layout_right = st.columns(2)
 
 with col_layout_left:
     st.markdown("### 📊 พิกัดคำสั่งซื้อขายประจำวันและการตรวจเทรนด์")
+    # จัดระเบียบช่อง DR Code และระยะเวลาถือครองไว้ 2 ช่องหลังสุดขวาสุดของตารางตามคำสั่งควบคุมเป๊ะ
     df_display = df_matrix.copy()
     df_display["จุดตัดขาดทุน (Stop Loss)"] = df_display["จุดตัดขาดทุน (Stop Loss)"].map(lambda x: f"${x:,.2f}")
     st.dataframe(df_display[["Ticker", "Buying Zone", "จุดตัดขาดทุน (Stop Loss)", "เป้าหมายทำกำไร (161.8%)", "คำสั่งควบคุมเรียลไทม์ (21.00 น.)", "DR Code (TH)", "ระยะเวลาถือครองเป้าหมาย"]], use_container_width=True)
     
-    st.markdown("---")
-    st.markdown("### 📈 แผงตรวจสอบแนวโน้มและแผนภาพกราฟเทคนิคอลราคาสด")
-    # กล่องควบคุมชิ้นเดียวเพื่อสั่งการรีเฟรชค่าพร้อมกันข้ามบอร์ดแบบไร้รอยต่อ
-    active_stock = st.selectbox("สลับรายชื่อหุ้นเพื่อดึงกราฟและบทวิเคราะห์เรียลไทม์:", df_matrix["Ticker"].tolist(), key="global_sync_ticker")
+    st.markdown("### 📈 แผนภาพกราฟเทคนิคอลเรียลไทม์ราคาสดจากตลาดสหรัฐฯ")
+    # ส่งพิกัดตลาดตัวพิมพ์ใหญ่เข้าวิดเจ็ตลิขสิทธิ์สากล TradingView API ของแท้ 100% 
+    market_prefix = "NYSE" if target_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
     
-    row_idx = int(df_matrix[df_matrix["Ticker"] == active_stock].index[0])
-    c_price = float(df_matrix.at[row_idx, "Price"])
-    s_loss = float(df_matrix.at[row_idx, "จุดตัดขาดทุน (Stop Loss)"])
-    action_status = df_matrix.at[row_idx, "คำสั่งควบคุมเรียลไทม์ (21.00 น.)"]
-    
-    if "🟢" in action_status:
-        st.success(f"🟢 **CDC Action Zone: BULLISH TREND ({active_stock})**\n\nราคาปัจจุบันอยู่ที่ `${c_price:.2f}` วิ่งเหนือจุดตัดขาดทุน `${s_loss:.2f}` โครงสร้าง Elliott Wave คอนเฟิร์มการสร้างฐานแนวรับคลื่น 2 เพื่อเตรียมระเบิดพลังงัดกลับขึ้นสู่คลื่น 3 ใหญ่ตามเกณฑ์มาสเตอร์ Spec")
-    else:
-        st.error(f"🔴 **CDC Action Zone: BEARISH / SIDEWAY ({active_stock})**\n\nราคาปัจจุบันอยู่ที่ `${c_price:.2f}` โครงสร้างราคายังลอยตัวสูงเกินไป โวลลุ่มซื้อขายยังแห้งไม่สนิท ระบบสั่งการล็อกคำสั่งให้คงสถานะนิ่งเฉย ห้ามไล่ราคา")
-
-    market_prefix = "NYSE" if active_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
-    tv_widget = f"""
-    <iframe src="https://tradingview.com{market_prefix}:{active_stock}&interval=D&symboledit=0&saveimage=0&toolbarbg=131722&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=th" 
-    width="100%" height="450" frameborder="0" allowtransparency="true" scrolling="no" style="border-radius:4px;" allowfullscreen></iframe>
+    tv_widget_code = f"""
+    <iframe src="https://tradingview.com{market_prefix}:{target_stock}&interval=D&symboledit=0&saveimage=0&toolbarbg=131722&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=th" 
+    width="100%" height="400" frameborder="0" allowtransparency="true" scrolling="no" style="border-radius:4px;" allowfullscreen></iframe>
     """
-    components.html(tv_widget, height=465)
+    components.html(tv_widget_code, height=415)
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
-    st.markdown(f"#### คำนวณหน้าตักความเสี่ยงหุ้น: **{active_stock}**")
+    st.markdown(f"#### คำนวณหน้าตักความเสี่ยงหุ้นปัจจุบัน: **{target_stock}**")
     
-    # 🚀 ปลดล็อกตัวจำค่ากล่องอินพุตโดยใช้คีย์แบบคงที่ (Clean Storage Sizer Fix) แก้ปัญหาราคาไม่ดีดตามถาวร
-    calc_price = st.number_input("ราคาปัจจุบัน ($):", value=c_price, format="%.2f", key="price_input_fixed")
-    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=s_loss, format="%.2f", key="sl_input_fixed")
+    # เจาะดัชนีแปลงค่าดึงราคามาเปลี่ยนตามทันทีพริบตาเดียว 100% ไร้อาการหน่วงค้าง
+    row_idx = int(df_matrix[df_matrix["Ticker"] == target_stock].index[0])
+    live_price = float(df_matrix.at[row_idx, "Price"])
+    live_sl = float(df_matrix.at[row_idx, "จุดตัดขาดทุน (Stop Loss)"])
+    
+    calc_price = st.number_input("ราคาปัจจุบัน ($):", value=live_price, format="%.2f", key=f"price_in_{target_stock}")
+    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=live_sl, format="%.2f", key=f"sl_in_{target_stock}")
     
     risk_amount = 10000.0 * (1.0 / 100.0)
     risk_per_share = calc_price - calc_sl
