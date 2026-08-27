@@ -42,19 +42,19 @@ with col_layout_left:
     st.markdown("### 📈 แผนภาพกราฟเทคนิคอลเรียลไทม์ (ตลาดสหรัฐฯ)")
     selected_stock = st.selectbox("เลือกชื่อหุ้นเพื่อดึงสัญญาณกราฟราคาสดรายตัว:", df_matrix["Ticker"].tolist(), key="chart_selector")
     
-    # พิกัดส่งลิงก์ตรงดิ่งเข้าสู่ศูนย์วิเคราะห์ทางเทคนิคตัวเต็มสากลของ TradingView (CDC ปลอดภัย 100%)
     market_prefix = "NYSE" if selected_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
     tv_url = f"https://tradingview.com{market_prefix}:{selected_stock}"
     
-    # 🚀 ตัวปลดล็อกสิทธิ์ระดับวิลลาร์: บังคับเปิดแท็บใหม่ผ่านปุ่มคลาวด์แท้ ลื่นไหล 100% ไร้รอยต่อ
-    st.link_button(label=f"🔗 คลิกเปิดหน้าต่างกราฟ {selected_stock} ขีดเส้นแนวเนลเรียลไทม์ 100%", url=tv_url, use_container_width=True)
-    st.caption("💡 ระบบเปลี่ยนมาใช้ปุ่มแท้ของ Streamlit ซึ่งได้รับอนุญาตความปลอดภัยขั้นสูงสุดในการข้ามจุดบล็อกและทะลวงเปิดหน้าแท็บใหม่บนคอมพิวเตอร์ได้ทันที")
+    # ปุ่มแท้ Streamlit ข้ามระบบบล็อกความปลอดภัยเปิดหน้าต่างแยกแท็บ 100%
+    st.link_button(label=f"🔗 คลิกเปิดหน้าต่างกราฟ {selected_stock} ขีดเส้นแนวโน้มเรียลไทม์ 100%", url=tv_url, use_container_width=True)
+    st.caption("💡 ระบบผูกลิงก์ลิขสิทธิ์สากลข้ามจุดบล็อกไปวาดแสดงผลกราฟราคาสดบราวเซอร์แท็บใหม่แบบเต็มจอ")
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
     calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณหน้าตักความเสี่ยง:", df_matrix["Ticker"].tolist(), key="sizer_selector")
     
-    target_idx = int(df_matrix[df_matrix["Ticker"] == calc_ticker].index)
+    # 🛠️ ใช้กลไก .index[0] ทลายบั๊ก TypeError ของหน่วยประมวลผลด่านสุดท้ายถาวร
+    target_idx = int(df_matrix[df_matrix["Ticker"] == calc_ticker].index[0])
     
     calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[target_idx, "Price"]), format="%.2f", key=f"price_input_{calc_ticker}")
     calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(df_matrix.at[target_idx, "จุดตัดขาดทุน (Stop Loss)"]), format="%.2f", key=f"sl_input_{calc_ticker}")
