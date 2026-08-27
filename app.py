@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Enterprise Wave 3 Engine", layout="wide")
 
@@ -15,9 +14,11 @@ if "risk_tolerance" not in st.session_state: st.session_state.risk_tolerance = 1
 matrix_data = {
     "Ticker": ["NKE", "PYPL", "EL", "ENPH", "DG", "IIPR", "ZM"],
     "Buying Zone": ["$38.50 - $40.00", "$63.50 - $65.50", "$90.00 - $93.00", "$35.50 - $37.50", "$118.00 - $122.00", "$55.00 - $57.65", "$96.00 - $101.00"],
-    "Stop Loss": [37.20, 61.20, 87.60, 34.20, 115.80, 53.80, 94.50],
-    "Target (161.8%)": ["$49.50", "$82.00", "$116.00", "$48.00", "$155.00", "$72.00", "$124.00"],
-    "Current Action": ["🟢 BUY LIMIT", "🟢 BUY LIMIT", "❌ WAIT", "🟢 BUY LIMIT", "❌ WAIT", "🟢 BUY LIMIT", "🟢 BUY LIMIT"],
+    "จุดตัดขาดทุน (Stop Loss)": [37.20, 61.20, 87.60, 34.20, 115.80, 53.80, 94.50],
+    "เป้าหมายทำกำไร (161.8%)": ["$49.50", "$82.00", "$116.00", "$48.00", "$155.00", "$72.00", "$124.00"],
+    "คำสั่งควบคุมเรียลไทม์ (21.00 น.)": ["🟢 BUY LIMIT", "🟢 BUY LIMIT", "❌ WAIT", "🟢 BUY LIMIT", "❌ WAIT", "🟢 BUY LIMIT", "🟢 BUY LIMIT"],
+    "DR Code (TH)": ["ไม่มีระบบ DR", "ไม่มีระบบ DR", "ไม่มีระบบ DR", "ไม่มีระบบ DR", "ไม่มีระบบ DR", "ไม่มีระบบ DR", "ไม่มีระบบ DR"],
+    "ระยะเวลาถือครองเป้าหมาย": ["ระยะสั้น-กลาง", "ระยะสั้น-กลาง", "ระยะกลาง-ยาว", "ระยะสั้น-กลาง", "ระยะกลาง-ยาว", "ระยะยาว (ปันผลสูง)", "ระยะสั้น-กลาง"],
     "Price": [39.48, 65.20, 98.10, 37.35, 124.15, 57.63, 100.92]
 }
 df_matrix = pd.DataFrame(matrix_data)
@@ -34,30 +35,28 @@ col_layout_left, col_layout_right = st.columns(2)
 
 with col_layout_left:
     st.markdown("### 📊 พิกัดคำสั่งซื้อขายประจำวันและการตรวจเทรนด์")
-    # แสดงผลตารางเวอร์ชันภาษาไทยอ่านง่ายสไตล์มาสเตอร์ spec
+    # แสดงผลตารางเวอร์ชันภาษาไทย จัดระเบียบช่อง DR Code และระยะเวลาไว้หลังสุดตามคำสั่งควบคุม
     df_display = df_matrix.copy()
-    df_display["Stop Loss"] = df_display["Stop Loss"].map(lambda x: f"${x:,.2f}")
-    st.dataframe(df_display[["Ticker", "Buying Zone", "Stop Loss", "Target (161.8%)", "Current Action"]], use_container_width=True)
+    df_display["จุดตัดขาดทุน (Stop Loss)"] = df_display["จุดตัดขาดทุน (Stop Loss)"].map(lambda x: f"${x:,.2f}")
+    st.dataframe(df_display[["Ticker", "Buying Zone", "จุดตัดขาดทุน (Stop Loss)", "เป้าหมายทำกำไร (161.8%)", "คำสั่งควบคุมเรียลไทม์ (21.00 น.)", "DR Code (TH)", "ระยะเวลาถือครองเป้าหมาย"]], use_container_width=True)
     
-    st.markdown("### 📈 แผนภาพกราฟเทคนิคอลเรียลไทม์ (TradingView Element)")
-    selected_stock = st.selectbox("สลับมุมมองกราฟหุ้นรายตัว:", ["NASDAQ:ENPH", "NYSE:NKE", "NASDAQ:PYPL", "NYSE:EL", "NYSE:DG", "NYSE:IIPR", "NASDAQ:ZM"])
-    tv_widget = f"""
-    <div class="tradingview-widget-container" style="height:380px;"><div id="tv_chart"></div>
-    <script type="text/javascript" src="https://tradingview.com"></script>
-    <script type="text/javascript">
-    new TradingView.widget({{"autosize": true, "symbol": "{selected_stock}", "interval": "D", "theme": "dark", "style": "1", "container_id": "tv_chart"}});
-    </script></div>
-    """
-    components.html(tv_widget, height=390)
+    st.markdown("### 📈 แผนภาพกราฟเทคนิคอลเรียลไทม์")
+    selected_stock = st.selectbox("เลือกชื่อหุ้นเพื่อดึงลิงก์เปิดกราฟแยกแท็บ:", df_matrix["Ticker"].tolist())
+    
+    # ดักจับชื่อตลาดสากลเพื่อส่งต่อเข้าลิงก์ความเร็วสูงสากล TradingView
+    market_prefix = "NYSE" if selected_stock in ["NKE", "EL", "DG", "IIPR"] else "NASDAQ"
+    tv_url = f"https://tradingview.com{market_prefix}:{selected_stock}"
+    
+    st.markdown(f'<a href="{tv_url}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #0088cc; color: white; text-align: center; text-decoration: none; font-size: 16px; border-radius: 4px; font-weight: bold; width: 100%;">🔗 คลิกเปิดกราฟเทคนิคอล {selected_stock} แยกหน้าต่างคมชัด 100%</a>', unsafe_allow_html=True)
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
-    # ฟังก์ชันสลับค่าตัวเลขแบบ Dynamic ผูกตรงตามตารางสากล
-    calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณ:", df_matrix["Ticker"].tolist())
+    # ฟังก์ชันสลับค่าตัวเลขแบบ Dynamic ตามชื่อหุ้นที่เลือกทันที
+    calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณหน้าตักความเสี่ยง:", df_matrix["Ticker"].tolist())
     
     stock_row = df_matrix[df_matrix["Ticker"] == calc_ticker].iloc[0]
     calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(stock_row["Price"]), format="%.2f")
-    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(stock_row["Stop Loss"]), format="%.2f")
+    calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=float(stock_row["จุดตัดขาดทุน (Stop Loss)"]), format="%.2f")
     
     risk_amount = (st.session_state.cash + total_val) * (st.session_state.get("risk_tolerance", 1.0) / 100.0)
     risk_per_share = calc_price - calc_sl
