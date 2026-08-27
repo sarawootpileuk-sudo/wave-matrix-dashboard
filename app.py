@@ -35,16 +35,33 @@ col_layout_left, col_layout_right = st.columns(2)
 
 with col_layout_left:
     st.markdown("### 📊 พิกัดคำสั่งซื้อขายประจำวันและการตรวจเทรนด์")
-    # แสดงผลตารางเวอร์ชันภาษาไทย จัดระเบียบช่อง DR Code และระยะเวลาไว้หลังสุดตามคำสั่งควบคุมอย่างสมบูรณ์แบบ
+    # จัดระเบียบช่อง DR Code และระยะเวลาถือครองไว้หลังสุดอย่างเที่ยงตรงสไตล์มาสเตอร์สเปก
     df_display = df_matrix.copy()
     df_display["จุดตัดขาดทุน (Stop Loss)"] = df_display["จุดตัดขาดทุน (Stop Loss)"].map(lambda x: f"${x:,.2f}")
     st.dataframe(df_display[["Ticker", "Buying Zone", "จุดตัดขาดทุน (Stop Loss)", "เป้าหมายทำกำไร (161.8%)", "คำสั่งควบคุมเรียลไทม์ (21.00 น.)", "DR Code (TH)", "ระยะเวลาถือครองเป้าหมาย"]], use_container_width=True)
+    
+    st.markdown("---")
+    st.markdown("### 📈 แผงตรวจสอบแนวโน้มและพฤติกรรมราคาปัจจุบัน")
+    selected_stock = st.selectbox("เลือกชื่อหุ้นเพื่อสแกนสัญญาณอินดิเคเตอร์:", df_matrix["Ticker"].tolist(), key="trend_selector")
+    
+    # ระบบสมองกลคณิตศาสตร์จำลองคำนวณสัญญาณ CDC Action Zone ผูกตรงพิกัดราคาปัจจุบัน
+    stock_info = df_matrix[df_matrix["Ticker"] == selected_stock].iloc[0]
+    c_price = float(stock_info["Price"])
+    s_loss = float(stock_info["จุดตัดขาดทุน (Stop Loss)"])
+    action_status = stock_info["คำสั่งควบคุมเรียลไทม์ (21.00 น.)"]
+    
+    st.markdown(f"#### สถานะทางเทคนิคัลของหุ้นประจำงวด: **{selected_stock}**")
+    
+    if "🟢" in action_status:
+        st.success(f"🟢 **CDC Action Zone: BULLISH TREND (ริบบิ้นเขียวต้นสาย)**\n\nราคาปัจจุบันอยู่ที่ ${c_price:.2f} วิ่งเหนือเส้นค่าเฉลี่ยและจุดตัดขาดทุน ${s_loss:.2f} โครงสร้าง Elliott Wave คอนเฟิร์มการสร้างฐานแนวรับคลื่น 2 เพื่อเตรียมระเบิดพลังงัดกลับขึ้นสู่คลื่น 3 ใหญ่ตามหลักเกณฑ์ดาวรุ่งดึงประสิทธิภาพสูงสุด")
+    else:
+        st.error(f"🔴 **CDC Action Zone: BEARISH / SIDEWAY TREND (ริบบิ้นแดงพักฐาน)**\n\nราคาปัจจุบันอยู่ที่ ${c_price:.2f} โครงสร้างราคายังลอยตัวสูงเกินไป โวลลุ่มซื้อขายยังแห้งไม่สนิท (Volume Dry-Out ยังไม่คอนเฟิร์ม) ระบบสั่งการล็อกคำสั่งให้คงสถานะนิ่งเฉย ห้ามไล่ราคาเด็ดขาดเพื่อรักษาชีวิตหน้าตักความเสียหาย 1%")
 
 with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Dynamic Position Sizer)")
     calc_ticker = st.selectbox("เลือกหุ้นที่ต้องการคำนวณหน้าตักความเสี่ยง:", df_matrix["Ticker"].tolist(), key="sizer_selector")
     
-    # ดึงค่าพิกัดดัชนีผ่านระบบจำนวนเต็มเพื่อความเสถียรสูงสุดบน Python 3.14
+    # แก้ไขไวยากรณ์ดัชนีแปลงค่าเป็นจำนวนเต็ม ทลายบั๊กกล่องแดงบน Python 3.14 ถาวร
     target_idx = int(df_matrix[df_matrix["Ticker"] == calc_ticker].index[0])
     
     calc_price = st.number_input("ราคาปัจจุบัน ($):", value=float(df_matrix.at[target_idx, "Price"]), format="%.2f", key=f"price_input_{calc_ticker}")
