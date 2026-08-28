@@ -12,7 +12,7 @@ st.caption("ระบบรันกลยุทธ์จำลองคลื�
 if "cash" not in st.session_state: st.session_state.cash = 10000.0
 if "portfolio" not in st.session_state: st.session_state.portfolio = {}
 
-# 2. 🛡️ REAL-TIME DATA PIPE: เจาะท่อดึงราคาสด ณ วินาทีปัจจุบันจากตลาดสหรัฐฯ ผ่าน Yahoo Finance API (ไม่มีการล็อกเลขมั่ว)
+# 2. REAL-TIME DATA PIPE: ดึงราคาสด ณ ปัจจุบันจากตลาดสหรัฐฯ ผ่าน Yahoo Finance API (ไม่มั่ว อ้างอิงราคาจริง)
 tickers_list = ["NKE", "PYPL", "EL", "ENPH", "DG", "IIPR", "ZM"]
 
 @st.cache_data(ttl=60) # ตั้งแคชให้อัปเดตข้อมูลราคาสดใหม่ทุกๆ 1 นาทีอัตโนมัติ
@@ -21,7 +21,6 @@ def get_live_market_data():
     for t in tickers_list:
         try:
             stock = yf.Ticker(t)
-            # ดึงราคาปิดล่าสุดหรือราคาก่อนเปิดตลาดจริง ณ วินาทีนี้
             data = stock.history(period="1d")
             if not data.empty:
                 live_prices[t] = round(data['Close'].iloc[-1], 2)
@@ -44,7 +43,7 @@ static_matrix = {
     "ระยะเวลาถือครองเป้าหมาย": ["ระยะสั้น-กลาง", "ระยะสั้น-กลาง", "ระยะกลาง-ยาว", "ระยะสั้น-กลาง", "ระยะกลาง-ยาว", "ระยะยาว (ปันผลสูง)", "ระยะสั้น-กลาง"]
 }
 df_matrix = pd.DataFrame(static_matrix)
-# ผูกราคาสดที่ดึงจากตลาดวิทนทีนี้เข้าสู่ตาราง Matrix
+# ผูกราคาสดที่ดึงจากกระดานสดเข้าสู่ตาราง Matrix
 df_matrix["ราคาตลาดจริง (USD)"] = df_matrix["Ticker"].map(current_market_prices)
 
 # 3. แสดงแผงสถิติ NAV รวมของพอร์ต
@@ -57,22 +56,17 @@ with m3: st.metric(label="💎 มูลค่าสินทรัพย์ส�
 
 st.markdown("---")
 
-# 4. 🚀 GLOBAL CONTROLLER: กล่องควบคุมชิ้นเดียวคุมทั้งหน้าจอแบบขยับสลับตามทันที
+# 4. GLOBAL CONTROLLER: กล่องควบคุมชิ้นเดียวคุมทั้งหน้าจอแบบขยับสลับตามทันที
 active_ticker = st.selectbox(
     "🎯 เมนูลัดปรับข่ายข้อมูล: คลิกเลือกชื่อหุ้นเพื่อสลับตาราง เครื่องคำนวณราคาสด และกราฟเทคนิคอลพร้อมกันทันที:", 
     df_matrix["Ticker"].tolist(), 
     key="global_live_selector"
 )
 
-row_idx = int(df_matrix[df_matrix["Ticker"] == active_ticker].index)
+# 🛠️ เติมเครื่องหมาย [0] ทลายบั๊ก InvalidIndexError และ TypeError ของ Python 3.14 ถาวร
+row_idx = df_matrix[df_matrix["Ticker"] == active_ticker].index[0]
 live_price = float(df_matrix.at[row_idx, "ราคาตลาดจริง (USD)"])
 live_sl = float(df_matrix.at[row_idx, "จุดตัดขาดทุน (Stop Loss)"])
-
-# คำนวณสถานะเรดาร์ CDC สดอิงราคาตลาดวินาทีนี้จริง ๆ 100%
-if live_price >= live_sl:
-    action_text = f"🟢 **CDC Signal: BULLISH TREND ({active_ticker})**\n\nราคาตลาดจริง ณ ตอนนี้อยู่ที่ `${live_price:.2f}` ซึ่งยืนรักษาระดับเหนือจุดตัดขาดทุนโครงสร้างเวฟ 2 ที่ `${live_sl:.2f}` ได้อย่างปลอดภัย สแตนด์บายคำสั่งซื้อคุมความเสี่ยงเพื่อล่าเวฟ 3 ใหญ่"
-else:
-    action_text = f"🔴 **CDC Signal: BEARISH TREND ({active_ticker})**\n\nราคาตลาดจริง ณ ตอนนี้หลุดแนวรับร่วงลงมาอยู่ที่ `${live_price:.2f}` ต่ำกว่าจุด Stop Loss `${live_sl:.2f}` ระบบสั่งล็อกระงับคำสั่งห้ามแตะต้องเด็ดขาด"
 
 col_layout_left, col_layout_right = st.columns(2)
 
@@ -97,7 +91,7 @@ with col_layout_right:
     st.markdown("### 🧮 เครื่องคำนวณขนาดออเดอร์อัจฉริยะ (Live Position Sizer)")
     st.markdown(f"#### พิกัดการคุมความเสี่ยงหน้าตัก 1% อิงราคาสดตลาดสหรัฐฯ: **{active_ticker}**")
     
-    # ⚡ ปลดล็อกหัวใจเครื่องคำนวณ: ดึงราคาปัจจุบันจากตลาดสดมาพ่นสับเปลี่ยนตัวเลขอัตโนมัติพริบตาเดียว
+    # ดึงราคาปัจจุบันและค่า Stop Loss จากดัชนีจำเพาะรายตัวเลขแถวมาพ่นสับเปลี่ยนค่าแบบ Dynamic 100%
     calc_price = st.number_input("ราคาปัจจุบันส่งตรงจากตลาด ($):", value=live_price, format="%.2f", key=f"live_p_in_{active_ticker}")
     calc_sl = st.number_input("จุดตัดขาดทุน Stop Loss ($):", value=live_sl, format="%.2f", key=f"live_sl_in_{active_ticker}")
     
@@ -113,9 +107,9 @@ with col_layout_right:
     st.markdown("---")
     st.markdown("### 🛡️ CDC Action Zone: สรุปบทวิเคราะห์เชิงลึกสดรายนาที")
     if live_price >= live_sl:
-        st.success(action_text)
+        st.success(f"🟢 **CDC Signal: BULLISH TREND ({active_ticker})**\n\nราคาตลาดจริง ณ ตอนนี้อยู่ที่ `${live_price:.2f}` ซึ่งยืนรักษาระดับเหนือจุดตัดขาดทุนโครงสร้างเวฟ 2 ที่ `${live_sl:.2f}` ได้อย่างปลอดภัย สแตนด์บายคำสั่งซื้อคุมความเสี่ยงเพื่อล่าเวฟ 3 ใหญ่")
     else:
-        st.error(action_text)
+        st.error(f"🔴 **CDC Signal: BEARISH TREND ({active_ticker})**\n\nราคาตลาดจริง ณ ตอนนี้หลุดแนวรับร่วงลงมาอยู่ที่ `${live_price:.2f}` ต่ำกว่าจุด Stop Loss `${live_sl:.2f}` ระบบสั่งล็อกระงับคำสั่งห้ามแตะต้องเด็ดขาด")
         
     st.markdown("---")
     st.markdown("### 🤖 ศูนย์รันคำสั่งดึงประสิทธิภาพ AI Pro โดยตรง")
